@@ -7,6 +7,13 @@ namespace League\Uploads;
 class UploadedFile extends \SplFileInfo
 {
     /**
+     * Data source for uploaded file data
+     *
+     * @var DataSource
+     */
+    protected static $dataSource;
+
+    /**
      * File extension
      */
     protected $extension;
@@ -46,11 +53,12 @@ class UploadedFile extends \SplFileInfo
      */
     public function __construct($path, $originalName = null)
     {
-        if (!is_uploaded_file($path)) {
+        if (!$this->isUploadedFile($path)) {
             throw new \InvalidArgumentException('File path is not a valid uploaded file');
         }
-        parent::__construct($path);
         $this->originalName = $originalName;
+
+        parent::__construct($path);
     }
 
     /**
@@ -62,15 +70,48 @@ class UploadedFile extends \SplFileInfo
      */
     public static function createFromGlobals($name)
     {
-        if (!isset($_FILES[$name])) {
-            throw new \InvalidArgumentException('File does not exist in $_FILES superglobal.');
+        if (static::$dataSource === null) {
+            static::$dataSource = new DataSource($_FILES);
         }
 
-        if ($_FILES[$name]['error'] !== UPLOAD_ERR_OK) {
-            throw new \RuntimeException('There is a file upload error', $_FILES[$name]['error']);
+        if (!isset(static::$dataSource[$name])) {
+            throw new \InvalidArgumentException('File does not exist in datasource.');
         }
 
-        return new static($_FILES[$name]['tmp_name'], $_FILES[$name]['name']);
+        if (static::$dataSource[$name]['error'] !== UPLOAD_ERR_OK) {
+            throw new \RuntimeException('File upload error', static::$dataSource[$name]['error']);
+        }
+
+        return new static(static::$dataSource[$name]['tmp_name'], static::$dataSource[$name]['name']);
+    }
+
+    /**
+     * Set uploaded file data source
+     *
+     * @param DataSource $source
+     */
+    public static function setDataSource(DataSource $source)
+    {
+        static::$dataSource = $source;
+    }
+
+    /**************************************************************************
+     * Helpers
+     *************************************************************************/
+
+    /**
+     * Is path a valid uploaded file?
+     *
+     * We separate this test into its own method so we can easily
+     * stub this method in unit tests.
+     *
+     * @param  string $path Local filesystem file path
+     *
+     * @return bool
+     */
+    public function isUploadedFile($path)
+    {
+        return is_uploaded_file($path);
     }
 
     /**************************************************************************
