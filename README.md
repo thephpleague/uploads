@@ -30,7 +30,7 @@ If you discover any security related issues, please email hello@joshlockhart.com
 
 ## Credits
 
-- Josh Lockhart(https://github.com/codeguy)
+- [Josh Lockhart](https://github.com/codeguy)
 - [All Contributors](../../contributors)
 
 ## License
