@@ -10,8 +10,19 @@ namespace League\Uploads;
 class DataSource implements \ArrayAccess, \IteratorAggregate, \Countable
 {
     /**
-     * Array of uploaded file data in the same format as
-     * the `$_FILES` superglobal array.
+     * Uploaded file data in normalized form:
+     *
+     * [
+     *     'foo' => [
+     *         0 => [
+     *             'name' => 'foo.txt',
+     *             'tmp_name' => 'sdfsfdfsdd',
+     *             'type' => 'text/plain',
+     *             'size' => 300,
+     *             'error' => UPLOAD_ERR_OK
+     *         ]
+     *     ]
+     * ]
      *
      * @var array
      */
@@ -20,34 +31,31 @@ class DataSource implements \ArrayAccess, \IteratorAggregate, \Countable
     /**
      * Create new data source
      *
-     * @param array $data Associative array that mimics the `$_FILES` superglobal array.
-     *
-     * @throws \InvalidArgumentException If data key is not a string
-     * @throws \InvalidArgumentException If data key does not have array value
-     * @throws \InvalidArgumentException If data key does not have `name` property
-     * @throws \InvalidArgumentException If data key does not have `tmp_name` property
+     * @param array $data Associative array that matches the `$_FILES` superglobal.
      */
     public function __construct(array $data)
     {
-        foreach ($data as $key => $properties) {
-            if (!is_string($key)) {
-                throw new \InvalidArgumentException('Data key is not a string: ' . $key);
-            }
-            if (!is_array($properties)) {
-                throw new \InvalidArgumentException('Data key does not have array value: ' . $key);
-            }
-            if (!isset($properties['name'])) {
-                throw new \InvalidArgumentException('Data key does not have `name` property: ' . $key);
-            }
-            if (!isset($properties['tmp_name'])) {
-                throw new \InvalidArgumentException('Data key does not have `tmp_name` property: ' . $key);
-            }
-            if (!isset($properties['error'])) {
-                $properties['error'] = UPLOAD_ERR_OK;
-            }
+        $this->data = $this->normalize($data);
+    }
 
-            $this->data[$key] = $properties;
+    /**
+     * Normalize `$_FILES` array
+     *
+     * @param  array  $origFiles Original `$_FILES` array
+     * @return array
+     */
+    protected function normalize(array $origFiles)
+    {
+        $newFiles = [];
+        foreach ($origFiles as $fieldName => $fieldValue) {
+            foreach ($fieldValue as $paramName => $paramValue) {
+                foreach ((array)$paramValue as $index => $value) {
+                    $newFiles[$fieldName][$index][$paramName] = $value;
+                }
+            }
         }
+
+        return $newFiles;
     }
 
     /**************************************************************************
